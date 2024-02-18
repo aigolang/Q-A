@@ -31,7 +31,7 @@ When we check the imported modules in the current session. <font color=#DC143C>W
 
 ##### Step2:
 We need to remove all installed versions of the module then install the latest one. 
-But uninstalling the Microsoft Graph module is a little bit complicated, because the Microsoft.Graph.Authentication module is the dependency of other Microsoft.Graph modules. We need to uninstall Microsoft.Graph modules except Microsoft.Graph.Authentication module.
+But uninstalling the Microsoft Graph module is a little bit complicated, because the Microsoft.Graph.Authentication module is the dependency of other Microsoft.Graph modules. We need to uninstall Microsoft.Graph modules except Microsoft.Graph.Authentication module firstly.
 
 <b>We need to use this script to re-install the Microsoft.Graph modules.</b>
 

@@ -1,6 +1,11 @@
 # Title: Creat a Dynamic Distribution Group based on an Organizational Unit and UserMailbox type.
 # Author: aigolang
 # Date: 2024-02-19
+# Note:
+# 1 We need to use OrganizationalUnit ID for the variable “$saveToOU” and “$basedOU”, DO NOT use the OU identity format like “test1.lab/IT” or “OU=IT,DC=test1,DC=lab”.
+# 2 To get members of the DDG, we need to use 2 parameter “-RecipientPreviewFilter” and “-OrganizationalUnit”, like:
+## Get-Recipient -RecipientPreviewFilter $DDG.RecipientFilter -OrganizationalUnit ($DDG.RecipientContainer)
+# 3 In the sample cmdlet “New-DynamicDistributionGroup”, we can see that the “RecipientFilter” is using “(RecipientTypeDetails -eq 'UserMailbox')”, which is just getting UserMailbox in the $basedOU, you can update the conditions as your requirements.
 
 Add-PSSnapin Microsoft.Exchange.Management.PowerShell.SnapIn 
 
@@ -14,29 +19,20 @@ function Get-DynamicDistributionGroupMember {
 } 
 
 ## Customize >>>
-$newDDGName = "DDG7"
-$saveToOU = "OU=IT,DC=test1,DC=lab"
-$fromOU = "OU=IT,DC=test1,DC=lab"
-$fromOUValue = "test1.lab/IT"
+$DDG_BasedOU1 = "DDG_BasedOU1"
+$saveToOU = "6728939xxxxxx"
+$basedOU = "2d5b765xxxxxx"
+## We can use Get-OrganizationalUnit to get the OU GUID.
 ## Customize <<<
 
-# Get all mailboxes based on a specific OU
-$mbList = Get-Mailbox -OrganizationalUnit $fromOU -ResultSize Unlimited | Where {$_.OrganizationalUnit -eq $fromOUValue}
+# Create DDG based on OU, all members should be the UserMailbox type in the specific OU.
+New-DynamicDistributionGroup -Name $DDG_BasedOU1 -Alias $DDG_BasedOU1 -OrganizationalUnit $saveToOU -RecipientFilter {((Alias -ne $null) -and `
+    ((RecipientTypeDetails -eq 'UserMailbox'))-and (-not(Name -like 'SystemMailbox{*')) -and `
+    (-not(Name -like 'CAS_{*')) -and (-not(RecipientTypeDetailsValue -eq 'MailboxPlan')) -and `
+    (-not(RecipientTypeDetailsValue -eq 'DiscoveryMailbox')) -and (-not(RecipientTypeDetailsValue -eq 'PublicFolderMailbox')) -and `
+    (-not(RecipientTypeDetailsValue -eq 'ArbitrationMailbox')) -and (-not(RecipientTypeDetailsValue -eq 'AuditLogMailbox')) -and `
+    (-not(RecipientTypeDetailsValue -eq 'AuxAuditLogMailbox')) -and (-not(RecipientTypeDetailsValue -eq 'SupervisoryReviewPolicyMailbox')))} `
+    -RecipientContainer $basedOU
 
-# Initialize the filter with the first mailbox
-$recipientFilter = "(Alias -eq '$($mbList[0])')"  
-
-# Append the rest of the mailbox alias or UserPrincipalName to the filter
-for ($i = 1; $i -lt $mbxList.Count; $i++) {
-    $recipientFilter += " -or (Alias -eq '$($mbList[$i])')"
-}
-
-# Check the members before creating a DDG.
-$testMembers = Get-Recipient -RecipientPreviewFilter $recipientFilter
-$testMembers
-Write-Host "Get-Recipient with the RecipientFilter count: $($testMembers.Count)" -ForegroundColor Cyan
-
-# Create a DDG based on the RecipientFilter object
-New-DynamicDistributionGroup -Name $newDDGName -Alias $newDDGName -OrganizationalUnit $saveToOU -RecipientFilter $recipientFilter 
-
-Get-DynamicDistributionGroupMember -Identity DDG7
+$DDG = Get-DynamicDistributionGroup -Identity $DDG_BasedOU1
+Get-Recipient -RecipientPreviewFilter $DDG.RecipientFilter -OrganizationalUnit ($DDG.RecipientContainer)
